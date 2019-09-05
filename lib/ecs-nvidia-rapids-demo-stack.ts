@@ -14,25 +14,13 @@ export class EcsNvidiaRapidsDemoStack extends cdk.Stack {
     // Create a new VPC
     const vpc = new ec2.Vpc(this, 'EcsVpc', { maxAzs: 2 });
 
-    // Create a new SG
-    const mySecurityGroup = new ec2.SecurityGroup(this, 'NewSecurityGroup', {
-      description: 'Allow ssh access to ec2 instances',
-      securityGroupName: 'ec2-ssh-access',
-      vpc: vpc
-    });    
-    mySecurityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(22));
-
     // Create an Autoscaling group
     const asg = new autoscaling.AutoScalingGroup(this, 'EcsFleet', {
       instanceType: ec2.InstanceType.of(ec2.InstanceClass.P3, ec2.InstanceSize.XLARGE2),
       machineImage: new ecs.EcsOptimizedAmi({ hardwareType: ecs.AmiHardwareType.GPU }),
       desiredCapacity: 1,
-      vpc,
-      keyName: "awskey",
-      associatePublicIpAddress: true,
-      vpcSubnets: { subnetType: ec2.SubnetType.PUBLIC }
-    });    
-    asg.addSecurityGroup(mySecurityGroup);
+      vpc
+    });
 
     // Create the ECS Cluster
     const cluster = new ecs.Cluster(this, 'RapidsCluster', { vpc });
@@ -110,7 +98,10 @@ export class EcsNvidiaRapidsDemoStack extends cdk.Stack {
       protocol: elbv2.ApplicationProtocol.HTTP,
       targets: [asg],
       healthCheck: {
-        healthyHttpCodes: "302",
+        healthyHttpCodes: "200-399",
+        timeout: cdk.Duration.seconds(10),
+        healthyThresholdCount: 3,
+        interval: cdk.Duration.seconds(30),
       },
     });
 
