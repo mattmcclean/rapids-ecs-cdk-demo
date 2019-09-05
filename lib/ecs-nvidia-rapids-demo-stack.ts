@@ -66,7 +66,7 @@ export class EcsNvidiaRapidsDemoStack extends cdk.Stack {
     }).stringValue;    
 
     const certArn = ssm.StringParameter.fromStringParameterAttributes(this, 'CertArnParam', {
-      parameterName: "hyperski-cert-arn-param",
+      parameterName: "rapidsai-cert-arn-param",
     }).stringValue;
 
     const cognitoUserpoolArn = ssm.StringParameter.fromStringParameterAttributes(this, 'CognitoUserpoolArnParam', {
