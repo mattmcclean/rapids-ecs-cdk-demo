@@ -28,7 +28,6 @@ export class EcsNvidiaRapidsDemoStack extends cdk.Stack {
     
     // create a task definition with CloudWatch Logs
     const logging = new ecs.AwsLogDriver({ streamPrefix: "rapids" })
-
     const taskDef = new ecs.Ec2TaskDefinition(this, "RapidsTaskDefinition");
     const container = taskDef.addContainer("RapidsContainer", {
       image: ecs.ContainerImage.fromRegistry("rapidsai/rapidsai:cuda10.0-runtime-ubuntu16.04"),
@@ -57,6 +56,7 @@ export class EcsNvidiaRapidsDemoStack extends cdk.Stack {
       }
     );
 
+    // get the Cognito parameters needed
     const siteUrl = ssm.StringParameter.fromStringParameterAttributes(this, 'SiteUrlParam', {
       parameterName: "rapdisai-url",
     }).stringValue;
@@ -87,12 +87,13 @@ export class EcsNvidiaRapidsDemoStack extends cdk.Stack {
       internetFacing: true,
     });
 
-    // create the listener
+    // create the ALB listener
     const listener = lb.addListener('Listener', {
       port: 443,
       certificateArns: [ certArn ],
     });
 
+    // create the ALB target
     const target = listener.addTargets('Target', {
       port: 8888,
       protocol: elbv2.ApplicationProtocol.HTTP,
@@ -105,6 +106,7 @@ export class EcsNvidiaRapidsDemoStack extends cdk.Stack {
       },
     });
 
+    // create the ALB listener rule
     const rule = new elbv2.ApplicationListenerRule(this, 'AuthRule', {
       pathPattern: "/",
       listener,
@@ -134,12 +136,12 @@ export class EcsNvidiaRapidsDemoStack extends cdk.Stack {
       },
     ];
 
+    // allow the ALB to receive connections from the world
     listener.connections.allowDefaultPortFromAnyIpv4('Open to the world');
     listener.connections.allowToAnyIpv4(ec2.Port.allTcp(), 'Allow to any IP range');    
 
-    const elb_target =  new route53_targets.LoadBalancerTarget(lb);
-
     // update the Route53 record set
+    const elb_target =  new route53_targets.LoadBalancerTarget(lb);
     new route53.RecordSet(this, 'RapidsRecordSet', {
       recordType: route53.RecordType.A,
       zone: route53.HostedZone.fromHostedZoneId(this, 'HostedZone', hostedZoneId),
